@@ -1,5 +1,6 @@
-#include "SDL.h"
-#undef main
+#include <stdio.h>
+#include <SDL.h>
+#include "app.h"
 
 // don't do this, this is just an example
 SDL_Renderer *renderer;
@@ -7,19 +8,28 @@ SDL_Window *window;
 int isRunning;
 int fullscreen;
 void handleEvents();
-void update();
-void render();
-void init();
 
-#define SCREEN_WIDTH 1500
+// static int resizingEventWatcher(void *data, SDL_Event *event)
+//{
+//	if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_RESIZED)
+//	{
+//		SDL_Window *window = SDL_GetWindowFromID(event->window.windowID);
+//		if (window == (SDL_Window *)data)
+//		{
+//			printf("reiszing...");
+//			render();
+//		}
+//	}
+// }
 
-// please don't put all your code in main like I did.
-int WinMain()
+Uint64 NOW = 0;
+Uint64 LAST = 0;
+double deltaTime = 0;
+int main()
 {
 
 	fullscreen = 0;
-	int flags = 0;
-	flags = SDL_WINDOW_RESIZABLE;
+	int flags = SDL_WINDOW_RESIZABLE;
 	if (fullscreen)
 	{
 		flags = flags | SDL_WINDOW_FULLSCREEN;
@@ -27,7 +37,8 @@ int WinMain()
 	if (SDL_Init(SDL_INIT_EVERYTHING) == 0)
 	{
 
-		window = SDL_CreateWindow("Test Window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1500, 500, flags);
+		window = SDL_CreateWindow("Test Window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH, SCREEN_HEIGHT, flags);
+		// SDL_AddEventWatch(resizingEventWatcher, window);
 		if (window)
 		{
 			SDL_SetWindowMinimumSize(window, 100, 100);
@@ -41,14 +52,20 @@ int WinMain()
 		}
 	}
 
+	NOW = SDL_GetPerformanceCounter();
 	init();
 	while (isRunning)
 	{
+		LAST = NOW;
+		NOW = SDL_GetPerformanceCounter();
+
+		deltaTime = (double)((NOW - LAST) * 1000 / (double)SDL_GetPerformanceFrequency());
 		handleEvents();
-		update();
-		render();
+		update(deltaTime);
+		render(renderer);
 	}
 
+	teardown();
 	// frees memory associated with renderer and window
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window); // error here
@@ -64,6 +81,13 @@ void handleEvents()
 	SDL_Event event;
 	SDL_PollEvent(&event);
 
+	if (event.type == SDL_WINDOWEVENT_SIZE_CHANGED)
+	{
+		int w = 0;
+		int h = 0;
+		SDL_GetRendererOutputSize(renderer, &w, &h);
+		printf("%dx%d", w, h);
+	}
 	switch (event.type)
 	{
 	case SDL_QUIT:
@@ -71,51 +95,5 @@ void handleEvents()
 		break;
 	default:
 		break;
-	}
-}
-int direction = 0;
-SDL_Rect rect;
-
-void init()
-{
-	rect.x = 0;
-	rect.y = 0;
-	rect.w = 100;
-	rect.h = 20;
-}
-// simple render function
-void render()
-{
-	SDL_SetRenderDrawColor(renderer, 121, 121, 121, 255);
-	SDL_RenderClear(renderer);
-
-	SDL_SetRenderDrawColor(renderer, 121, 0, 121, 255);
-
-	SDL_RenderFillRect(renderer, &rect);
-	SDL_RenderPresent(renderer); // copy to screen
-
-	// your stuff to render would typically go here.
-	SDL_RenderPresent(renderer);
-}
-
-// simple update function
-void update()
-{
-	if (direction == 0)
-	{
-		rect.x += 1;
-	}
-	else
-	{
-		rect.x -= 1;
-	}
-
-	if (rect.x > 1250 && direction == 0)
-	{
-		direction = 1;
-	}
-	else if (rect.x <= 0 && direction == 1)
-	{
-		direction = 0;
 	}
 }
